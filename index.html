@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="Offline hourly activity log — local storage, tables, PDF" />
+  <title>Hourly Activity Log</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div>
+        <h1>Hourly Activity Log</h1>
+        <p class="sub">Runs offline · No popups — fill rows when you want · Data stays on this device</p>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="btn-install" class="btn secondary hidden">Install app</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button type="button" class="tab active" id="tab-btn-log" role="tab" aria-selected="true" aria-controls="panel-log" data-panel="log">Day log</button>
+      <button type="button" class="tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="panel-history" data-panel="history">All days</button>
+    </nav>
+
+    <section id="panel-log" class="panel" role="tabpanel" aria-labelledby="tab-btn-log">
+      <div class="card">
+        <div class="toolbar">
+          <label class="field">
+            <span>Date</span>
+            <input type="date" id="view-date" />
+          </label>
+          <button type="button" id="btn-today" class="btn secondary">Today</button>
+          <button type="button" id="btn-pdf" class="btn">Download PDF</button>
+        </div>
+        <p id="day-summary" class="day-summary"></p>
+        <div class="table-wrap">
+          <table class="day-table" id="day-table" aria-describedby="day-summary">
+            <thead>
+              <tr>
+                <th scope="col" class="col-hour">Hour</th>
+                <th scope="col">Activity (write freely)</th>
+                <th scope="col" class="col-skip">Skip</th>
+              </tr>
+            </thead>
+            <tbody id="hour-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-history" class="panel hidden" role="tabpanel" aria-labelledby="tab-btn-history" hidden>
+      <div class="card">
+        <h2 class="history-heading">Days with entries</h2>
+        <p class="hint history-hint">Each row is one calendar day. Open a day to edit the full 24-hour table.</p>
+        <div class="table-wrap">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Day</th>
+                <th scope="col">Hours filled</th>
+                <th scope="col">Preview</th>
+                <th scope="col" class="col-open">Open</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+        <p id="history-empty" class="history-empty hidden">No entries yet. Use <strong>Day log</strong> and type in any hour row.</p>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <p>Storage: browser local storage only. Uninstalling or clearing site data removes logs.</p>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

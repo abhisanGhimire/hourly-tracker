@@ -1,0 +1,8 @@
+# Local archives (often mistaken by scanners; not needed in repo)
+*.zip
+*.rar
+*.7z
+
+# OS
+Thumbs.db
+.DS_Store
