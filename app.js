@@ -611,7 +611,15 @@
 
   function registerSW() {
     if (!('serviceWorker' in navigator)) return Promise.resolve(null);
-    return navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => null);
+    return navigator.serviceWorker
+      .register('./sw.js', { scope: './', updateViaCache: 'none' })
+      .then((reg) => {
+        try {
+          reg.update();
+        } catch (_) {}
+        return reg;
+      })
+      .catch(() => null);
   }
 
   function setupInstall() {
@@ -637,8 +645,13 @@
   if (el.btnNotifyAllow) el.btnNotifyAllow.addEventListener('click', onNotifyAllowClick);
   if (el.btnNotifyDisable) el.btnNotifyDisable.addEventListener('click', onNotifyDisableClick);
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then((r) => {
+        if (r) r.update();
+      });
+    }
     if (
-      document.visibilityState === 'visible' &&
       settings.notifyEnabled &&
       typeof Notification !== 'undefined' &&
       Notification.permission === 'granted'
