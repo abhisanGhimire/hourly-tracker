@@ -11,20 +11,38 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
 <body>
+  <datalist id="activity-suggestions"></datalist>
+
   <div id="app">
     <header class="top">
       <div>
         <h1>Hourly Activity Log</h1>
-        <p class="sub">Runs offline · No popups — fill rows when you want · Data stays on this device</p>
+        <p class="sub">Runs offline · Submit each hour to save · Suggestions from past entries · Data stays on this device</p>
       </div>
       <div class="top-actions">
         <button type="button" id="btn-install" class="btn secondary hidden">Install app</button>
       </div>
     </header>
 
-    <nav class="tabs" role="tablist" aria-label="Views">
+    <section class="card notify-card" id="notify-card" aria-labelledby="notify-title">
+      <h2 class="notify-title" id="notify-title">Hourly reminders</h2>
+      <p id="notify-desc" class="notify-desc">
+        Allow notifications so Android can remind you once each hour to log your activity. You must tap the button below—Chrome will ask for permission.
+      </p>
+      <p id="notify-android-hint" class="notify-hint hidden">
+        <strong>Android:</strong> If you blocked alerts before, open <em>Chrome → site info (lock) → Permissions → Notifications</em> for this site, or <em>Settings → Apps → Chrome → Notifications</em>.
+      </p>
+      <div class="notify-actions">
+        <button type="button" id="btn-notify-allow" class="btn">Allow hourly notifications</button>
+        <button type="button" id="btn-notify-disable" class="btn secondary hidden">Turn off hourly reminders</button>
+      </div>
+      <p id="notify-status" class="notify-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <nav class="tabs tabs-3" role="tablist" aria-label="Views">
       <button type="button" class="tab active" id="tab-btn-log" role="tab" aria-selected="true" aria-controls="panel-log" data-panel="log">Day log</button>
       <button type="button" class="tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="panel-history" data-panel="history">All days</button>
+      <button type="button" class="tab" id="tab-btn-activity" role="tab" aria-selected="false" aria-controls="panel-activity" data-panel="activity">By activity</button>
     </nav>
 
     <section id="panel-log" class="panel" role="tabpanel" aria-labelledby="tab-btn-log">
@@ -38,13 +56,14 @@
           <button type="button" id="btn-pdf" class="btn">Download PDF</button>
         </div>
         <p id="day-summary" class="day-summary"></p>
+        <p class="hint activity-hint">Each row is a time range (e.g. 12 PM – 1 PM). Type or pick a suggestion, then press <strong>Submit</strong> to save that hour.</p>
         <div class="table-wrap">
           <table class="day-table" id="day-table" aria-describedby="day-summary">
             <thead>
               <tr>
-                <th scope="col" class="col-hour">Hour</th>
-                <th scope="col">Activity (write freely)</th>
-                <th scope="col" class="col-skip">Skip</th>
+                <th scope="col" class="col-hour">Time</th>
+                <th scope="col">Activity</th>
+                <th scope="col" class="col-submit">Save</th>
               </tr>
             </thead>
             <tbody id="hour-tbody"></tbody>
@@ -56,7 +75,7 @@
     <section id="panel-history" class="panel hidden" role="tabpanel" aria-labelledby="tab-btn-history" hidden>
       <div class="card">
         <h2 class="history-heading">Days with entries</h2>
-        <p class="hint history-hint">Each row is one calendar day. Open a day to edit the full 24-hour table.</p>
+        <p class="hint history-hint">Each row is one calendar day. Open a day to edit hours.</p>
         <div class="table-wrap">
           <table class="history-table" id="history-table">
             <thead>
@@ -64,14 +83,36 @@
                 <th scope="col">Date</th>
                 <th scope="col">Day</th>
                 <th scope="col">Hours filled</th>
-                <th scope="col">Preview</th>
                 <th scope="col" class="col-open">Open</th>
               </tr>
             </thead>
             <tbody id="history-tbody"></tbody>
           </table>
         </div>
-        <p id="history-empty" class="history-empty hidden">No entries yet. Use <strong>Day log</strong> and type in any hour row.</p>
+        <p id="history-empty" class="history-empty hidden">No entries yet. Use <strong>Day log</strong>, write activities, and press <strong>Submit</strong> on each row.</p>
+      </div>
+    </section>
+
+    <section id="panel-activity" class="panel hidden" role="tabpanel" aria-labelledby="tab-btn-activity" hidden>
+      <div class="card">
+        <h2 class="history-heading">Time by activity</h2>
+        <p class="hint activity-by-hint">
+          Each hour you submit counts as <strong>1 hour</strong> toward that activity. Entries with the same wording (ignoring capital letters) are grouped together.
+        </p>
+        <p id="activity-total" class="day-summary" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table class="activity-summary-table" id="activity-summary-table">
+            <thead>
+              <tr>
+                <th scope="col">Activity</th>
+                <th scope="col" class="col-hours">Hours</th>
+                <th scope="col" class="col-pct">Share</th>
+              </tr>
+            </thead>
+            <tbody id="activity-tbody"></tbody>
+          </table>
+        </div>
+        <p id="activity-empty" class="history-empty hidden">No activities logged yet. Use <strong>Day log</strong> and press <strong>Submit</strong> on each hour.</p>
       </div>
     </section>
 

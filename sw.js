@@ -1,5 +1,5 @@
 /* Hourly Activity Log — offline cache */
-const CACHE = 'hourly-log-v3';
+const CACHE = 'hourly-log-v6';
 const ASSETS = [
   './',
   './index.html',

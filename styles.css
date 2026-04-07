@@ -37,6 +37,18 @@ body {
   margin-bottom: 1rem;
 }
 
+.tabs-3 .tab {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.5rem;
+}
+
+@media (min-width: 420px) {
+  .tabs-3 .tab {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.65rem;
+  }
+}
+
 .tab {
   flex: 1;
   min-height: 44px;
@@ -57,6 +69,48 @@ body {
 }
 
 .panel.hidden {
+  display: none !important;
+}
+
+.notify-card {
+  margin-bottom: 1rem;
+}
+
+.notify-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.notify-desc,
+.notify-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.notify-hint.hidden {
+  display: none;
+}
+
+.notify-hint strong {
+  color: #cbd5e1;
+}
+
+.notify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.notify-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.notify-actions .hidden {
   display: none !important;
 }
 
@@ -179,6 +233,16 @@ input[type="date"] {
   margin-bottom: 0.75rem;
 }
 
+.activity-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.activity-hint strong {
+  color: #cbd5e1;
+}
+
 .table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -206,13 +270,15 @@ input[type="date"] {
 }
 
 .day-table .col-hour {
-  width: 5.5rem;
-  white-space: nowrap;
+  min-width: 9.5rem;
+  max-width: 12rem;
+  white-space: normal;
 }
 
-.day-table .col-skip {
+.day-table .col-submit {
   width: 5.5rem;
   text-align: center;
+  white-space: nowrap;
 }
 
 .cell-hour {
@@ -225,9 +291,33 @@ input[type="date"] {
   color: #cbd5e1;
 }
 
+.suggest-wrap {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.suggest-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.suggest-input {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+}
+
 .cell-activity textarea.hour-input {
   width: 100%;
-  min-height: 3rem;
+  min-height: 4rem;
   resize: vertical;
   background: var(--bg);
   color: var(--text);
@@ -239,33 +329,14 @@ input[type="date"] {
   line-height: 1.4;
 }
 
-.cell-activity textarea.hour-input:disabled {
-  opacity: 0.55;
+.cell-submit {
+  text-align: center;
+  vertical-align: middle;
 }
 
-.skip-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.skip-label input {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-.skip-txt {
-  display: none;
-}
-
-@media (min-width: 480px) {
-  .skip-txt {
-    display: inline;
-  }
+.cell-submit .btn-submit {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 .day-table tbody tr.row-done {
@@ -316,13 +387,6 @@ input[type="date"] {
   font-variant-numeric: tabular-nums;
 }
 
-.history-table .preview {
-  max-width: 28rem;
-  word-break: break-word;
-  color: #cbd5e1;
-  font-size: 0.85rem;
-}
-
 .history-table .col-open {
   width: 5.5rem;
   white-space: nowrap;
@@ -341,6 +405,51 @@ input[type="date"] {
 
 .history-empty.hidden {
   display: none;
+}
+
+.activity-by-hint {
+  margin: 0 0 0.75rem;
+}
+
+.activity-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.activity-summary-table th,
+.activity-summary-table td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.activity-summary-table thead th {
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.activity-summary-table .col-hours {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.activity-summary-table .col-pct {
+  width: 4.5rem;
+  text-align: center;
+}
+
+.activity-summary-table .activity-cell {
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: #e2e8f0;
+}
+
+.activity-summary-table tbody tr:nth-child(even) {
+  background: rgba(15, 23, 42, 0.35);
 }
 
 .foot {
