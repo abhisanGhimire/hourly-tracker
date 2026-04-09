@@ -90,6 +90,30 @@ body {
   display: none !important;
 }
 
+.install-card {
+  margin-bottom: 1rem;
+}
+
+.install-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.install-desc {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.install-desc:last-child {
+  margin-bottom: 0;
+}
+
+.install-desc strong {
+  color: #cbd5e1;
+}
+
 .notify-card {
   margin-bottom: 1rem;
 }

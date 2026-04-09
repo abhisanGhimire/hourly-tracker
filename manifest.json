@@ -2,24 +2,39 @@
   "name": "Hourly Activity Log",
   "short_name": "Hour Log",
   "description": "Offline hourly activity log with reminders and PDF export",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": ["productivity", "lifestyle"],
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

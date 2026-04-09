@@ -22,6 +22,7 @@
     btnToday: document.getElementById('btn-today'),
     btnPdf: document.getElementById('btn-pdf'),
     btnInstall: document.getElementById('btn-install'),
+    installCard: document.getElementById('install-card'),
     panelLog: document.getElementById('panel-log'),
     panelHistory: document.getElementById('panel-history'),
     panelActivity: document.getElementById('panel-activity'),
@@ -774,19 +775,46 @@
       .catch(() => null);
   }
 
+  function isStandalonePwa() {
+    if (window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (typeof navigator !== 'undefined' && 'standalone' in navigator && navigator.standalone) return true;
+    return false;
+  }
+
+  function initInstallUI() {
+    if (!el.installCard) return;
+    if (isStandalonePwa()) {
+      el.installCard.classList.add('hidden');
+      if (el.btnInstall) el.btnInstall.classList.add('hidden');
+      return;
+    }
+    el.installCard.classList.remove('hidden');
+  }
+
   function setupInstall() {
+    initInstallUI();
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstall = e;
-      el.btnInstall.classList.remove('hidden');
+      if (el.btnInstall) el.btnInstall.classList.remove('hidden');
     });
-    el.btnInstall.addEventListener('click', async () => {
-      if (!deferredInstall) return;
-      deferredInstall.prompt();
-      await deferredInstall.userChoice;
+
+    window.addEventListener('appinstalled', () => {
       deferredInstall = null;
-      el.btnInstall.classList.add('hidden');
+      if (el.btnInstall) el.btnInstall.classList.add('hidden');
+      if (el.installCard) el.installCard.classList.add('hidden');
     });
+
+    if (el.btnInstall) {
+      el.btnInstall.addEventListener('click', async () => {
+        if (!deferredInstall) return;
+        deferredInstall.prompt();
+        await deferredInstall.userChoice;
+        deferredInstall = null;
+        el.btnInstall.classList.add('hidden');
+      });
+    }
   }
 
   loadState();

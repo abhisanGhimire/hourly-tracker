@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#2563eb" />
   <meta name="description" content="Offline hourly activity log — local storage, tables, PDF" />
   <title>Hourly Activity Log</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <datalist id="activity-suggestions"></datalist>
@@ -24,6 +27,17 @@
         <button type="button" id="btn-install" class="btn secondary hidden">Install app</button>
       </div>
     </header>
+
+    <section id="install-card" class="card install-card hidden" aria-labelledby="install-title">
+      <h2 class="install-title" id="install-title">Install on your phone</h2>
+      <p class="install-desc">
+        <strong>Android (Chrome):</strong> Tap the menu <strong>⋮</strong> (top right) → <strong>Install app</strong> or <strong>Add to Home screen</strong>. You can also use the
+        <strong>Install app</strong> button above when Chrome offers it.
+      </p>
+      <p class="install-desc">
+        <strong>Chrome desktop:</strong> Use <strong>Install app</strong> in the header or the install icon in the address bar when the site is installable.
+      </p>
+    </section>
 
     <section class="card notify-card" id="notify-card" aria-labelledby="notify-title">
       <h2 class="notify-title" id="notify-title">Hourly reminders</h2>

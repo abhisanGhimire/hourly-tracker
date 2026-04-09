@@ -1,12 +1,14 @@
 /* Hourly Activity Log — network-first for app shell so deploys show up after refresh */
-const CACHE = 'hourly-log-v10';
+const CACHE = 'hourly-log-v11';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
       .then((cache) =>
-        cache.addAll(['./icons/icon-192.png', './icons/icon-512.png']).catch(() => {})
+        cache
+          .addAll(['./manifest.json', './icons/icon-192.png', './icons/icon-512.png'])
+          .catch(() => {})
       )
       .then(() => self.skipWaiting())
   );
