@@ -72,8 +72,12 @@
           <button type="button" id="btn-pdf" class="btn">Download PDF</button>
         </div>
         <p id="day-summary" class="day-summary"></p>
-        <p class="hint activity-hint">Each block is one hour. Pick a suggestion or type, then <strong>Submit</strong> to save.</p>
-        <div id="hour-list" class="hour-cards" role="feed" aria-label="Hour by hour log" aria-busy="false"></div>
+        <p class="hint activity-hint">
+          Set <strong>Start</strong> and <strong>End</strong> for each block (any length). Describe the activity, then <strong>Submit</strong>.
+          Use <strong>Add time slot</strong> for more rows. Overnight ranges work (e.g. 23:00 → 00:00 = 1 h).
+        </p>
+        <div id="hour-list" class="hour-cards" role="feed" aria-label="Time slots for this day" aria-busy="false"></div>
+        <button type="button" id="btn-add-slot" class="btn secondary slot-add-btn">Add time slot</button>
       </div>
     </section>
 
@@ -90,7 +94,7 @@
       <div class="card">
         <h2 class="history-heading">Time by activity</h2>
         <p class="hint activity-by-hint">
-          Each hour you submit counts as <strong>1 hour</strong> toward that activity. Entries with the same wording (ignoring capital letters) are grouped together.
+          Each saved block adds its <strong>duration</strong> (end − start) toward that activity. Same wording (ignoring capital letters) is grouped together.
         </p>
         <p id="activity-total" class="day-summary" aria-live="polite"></p>
         <div id="activity-list" class="activity-cards" role="region" aria-label="Totals by activity"></div>

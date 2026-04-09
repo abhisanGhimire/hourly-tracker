@@ -1,5 +1,5 @@
 /* Hourly Activity Log — network-first for app shell so deploys show up after refresh */
-const CACHE = 'hourly-log-v12';
+const CACHE = 'hourly-log-v13';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

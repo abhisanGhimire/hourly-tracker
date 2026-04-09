@@ -318,10 +318,9 @@ input[type="date"] {
 
 .hour-card-top {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.65rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--border);
@@ -330,6 +329,10 @@ input[type="date"] {
 .hour-card-time {
   flex: 1;
   min-width: 0;
+}
+
+.hour-card-time--flex {
+  width: 100%;
 }
 
 .hour-card-kicker {
@@ -350,9 +353,69 @@ input[type="date"] {
   word-break: break-word;
 }
 
-.hour-card-top .btn-submit {
-  flex-shrink: 0;
+.hour-range--sub {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.time-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.85rem;
+  width: 100%;
+}
+
+.time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.time-field-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.time-field input[type='time'] {
+  min-height: var(--touch-min);
+  font-size: 1rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  max-width: 100%;
+}
+
+.slot-duration {
+  font-size: 0.82rem;
+  color: var(--muted);
+  align-self: center;
+  padding-bottom: 0.2rem;
+  min-width: 3.25rem;
+}
+
+.hour-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.hour-card-actions .btn-submit {
   min-width: 6.75rem;
+}
+
+.slot-add-btn {
+  width: 100%;
+  margin-top: 0.35rem;
 }
 
 .hour-card-fields {
@@ -410,8 +473,10 @@ input[type="date"] {
 }
 
 @media (max-width: 400px) {
-  .hour-card-top .btn-submit {
+  .hour-card-actions .btn-submit,
+  .hour-card-actions .btn-remove-slot {
     width: 100%;
+    justify-content: center;
   }
 }
 

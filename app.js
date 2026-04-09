@@ -5,8 +5,8 @@
   const LEGACY_KEY = 'hourlyActivityLog_v1';
   const SETTINGS_KEY = 'hourlyTrackerSettings_v1';
 
-  /** @type {{ entries: Record<string, { text: string, at?: string }>, suggestionLibrary: string[] }} */
-  let state = { entries: {}, suggestionLibrary: [] };
+  /** @type {{ days: Record<string, { id: string, start: string, end: string, text: string, at?: string }[]>, suggestionLibrary: string[] }} */
+  let state = { days: {}, suggestionLibrary: [] };
 
   let deferredInstall = null;
   /** @type {{ notifyEnabled: boolean }} */
@@ -21,6 +21,7 @@
     daySummary: document.getElementById('day-summary'),
     btnToday: document.getElementById('btn-today'),
     btnPdf: document.getElementById('btn-pdf'),
+    btnAddSlot: document.getElementById('btn-add-slot'),
     btnInstall: document.getElementById('btn-install'),
     installCard: document.getElementById('install-card'),
     panelLog: document.getElementById('panel-log'),
@@ -59,19 +60,80 @@
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
 
-  function slotKeyFromDateHour(dateStr, hour) {
-    return `${dateStr}T${pad2(hour)}`;
+  function parseTimeToMinutes(t) {
+    if (!t || typeof t !== 'string') return 0;
+    const parts = t.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1] || '0', 10);
+    if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+    return h * 60 + m;
   }
 
-  /** e.g. 12 PM – 1 PM for hour slot h on dateStr */
-  function hourRangeLabel(dateStr, h) {
-    const start = new Date(dateStr + 'T' + pad2(h) + ':00:00');
-    if (Number.isNaN(start.getTime())) return '—';
-    const end = new Date(start);
-    end.setHours(end.getHours() + 1);
-    const a = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    const b = end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  /** Hours between start/end; if end <= start, treat as next calendar day (overnight). */
+  function slotDurationHours(start, end) {
+    let a = parseTimeToMinutes(start);
+    let b = parseTimeToMinutes(end);
+    if (b <= a) b += 24 * 60;
+    return (b - a) / 60;
+  }
+
+  function addMinutesToTimeStr(timeStr, deltaMin) {
+    let m = parseTimeToMinutes(timeStr) + deltaMin;
+    m = ((m % (24 * 60)) + 24 * 60) % (24 * 60);
+    const h = Math.floor(m / 60);
+    const mnt = m % 60;
+    return `${pad2(h)}:${pad2(mnt)}`;
+  }
+
+  function formatRangeLabel(dateStr, start, end) {
+    const d0 = new Date(dateStr + 'T' + start + ':00');
+    if (Number.isNaN(d0.getTime())) return '—';
+    const d1 = new Date(dateStr + 'T' + end + ':00');
+    if (parseTimeToMinutes(end) <= parseTimeToMinutes(start)) {
+      d1.setDate(d1.getDate() + 1);
+    }
+    if (Number.isNaN(d1.getTime())) return '—';
+    const a = d0.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    const b = d1.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     return `${a} – ${b}`;
+  }
+
+  function formatDurationShort(h) {
+    if (h <= 0 || Number.isNaN(h)) return '—';
+    const r = Math.round(h * 100) / 100;
+    if (Number.isInteger(r)) return `${r} h`;
+    return `${r.toFixed(2).replace(/\.?0+$/, '')} h`;
+  }
+
+  function newId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return 's' + crypto.randomUUID().replace(/-/g, '');
+    }
+    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function migrateV2ToV3(entries) {
+    /** @type {Record<string, { id: string, start: string, end: string, text: string, at?: string }[]>} */
+    const days = {};
+    Object.keys(entries || {}).forEach((key) => {
+      const m = key.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})$/);
+      if (!m) return;
+      const dateStr = m[1];
+      const hour = parseInt(m[2], 10);
+      if (Number.isNaN(hour) || hour < 0 || hour > 23) return;
+      const e = entries[key];
+      const t = typeof e.text === 'string' ? e.text.trim() : '';
+      if (!t) return;
+      if (!days[dateStr]) days[dateStr] = [];
+      const start = `${pad2(hour)}:00`;
+      const end = hour === 23 ? '00:00' : `${pad2(hour + 1)}:00`;
+      const safeId = 'm-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+      days[dateStr].push({ id: safeId, start, end, text: t, at: e.at });
+    });
+    Object.keys(days).forEach((d) => {
+      days[d].sort((a, b) => parseTimeToMinutes(a.start) - parseTimeToMinutes(b.start));
+    });
+    return days;
   }
 
   function migrateV1Entries(old) {
@@ -88,16 +150,18 @@
     return out;
   }
 
-  function uniqueTextsFromEntries(entries) {
+  function uniqueTextsFromDays(days) {
     const seen = new Set();
     const list = [];
-    Object.keys(entries || {}).forEach((k) => {
-      const t = (entries[k].text || '').trim();
-      if (!t) return;
-      const low = t.toLowerCase();
-      if (seen.has(low)) return;
-      seen.add(low);
-      list.push(t);
+    Object.keys(days || {}).forEach((dateStr) => {
+      (days[dateStr] || []).forEach((slot) => {
+        const t = (slot.text || '').trim();
+        if (!t) return;
+        const low = t.toLowerCase();
+        if (seen.has(low)) return;
+        seen.add(low);
+        list.push(t);
+      });
     });
     return list;
   }
@@ -136,7 +200,7 @@
     if (!settings.notifyEnabled) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     const title = 'Hourly activity log';
-    const body = 'Time to log what you did in the last hour. Open the app and tap Submit on that row.';
+    const body = 'Time to log your activity. Open the app, set your time range, and tap Submit.';
     const opts = {
       body,
       icon: new URL('icons/icon-192.png', window.location.href).href,
@@ -257,23 +321,33 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.version === 2 && typeof parsed.entries === 'object') {
-          state.entries = parsed.entries;
+        if (parsed && parsed.version === 3 && typeof parsed.days === 'object') {
+          state.days = parsed.days;
           state.suggestionLibrary = Array.isArray(parsed.suggestionLibrary) ? parsed.suggestionLibrary : [];
+          return;
+        }
+        if (parsed && parsed.version === 2 && typeof parsed.entries === 'object') {
+          state.days = migrateV2ToV3(parsed.entries);
+          state.suggestionLibrary = Array.isArray(parsed.suggestionLibrary) ? parsed.suggestionLibrary : [];
+          if (!state.suggestionLibrary.length) {
+            state.suggestionLibrary = uniqueTextsFromDays(state.days).slice(0, 400);
+          }
+          saveState();
           return;
         }
       }
       const legacy = localStorage.getItem(LEGACY_KEY);
       if (legacy) {
         const parsed = JSON.parse(legacy);
-        state.entries = migrateV1Entries(parsed.entries || {});
-        state.suggestionLibrary = uniqueTextsFromEntries(state.entries);
+        const entries = migrateV1Entries(parsed.entries || {});
+        state.days = migrateV2ToV3(entries);
+        state.suggestionLibrary = uniqueTextsFromDays(state.days);
         saveState();
         localStorage.removeItem(LEGACY_KEY);
         return;
       }
     } catch (_) {
-      state = { entries: {}, suggestionLibrary: [] };
+      state = { days: {}, suggestionLibrary: [] };
     }
   }
 
@@ -281,26 +355,11 @@
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
-        entries: state.entries,
+        version: 3,
+        days: state.days,
         suggestionLibrary: state.suggestionLibrary
       })
     );
-  }
-
-  function hasSavedEntry(key) {
-    const e = state.entries[key];
-    return !!(e && typeof e.text === 'string' && e.text.trim().length > 0);
-  }
-
-  function persistSlot(key, text) {
-    const trimmed = (text || '').trim();
-    if (!trimmed) {
-      delete state.entries[key];
-    } else {
-      state.entries[key] = { text: trimmed, at: new Date().toISOString() };
-    }
-    saveState();
   }
 
   function addToSuggestionLibrary(text) {
@@ -332,72 +391,167 @@
     return state.suggestionLibrary.some((s) => s.toLowerCase() === low);
   }
 
-  function updateDaySummary() {
-    const dateStr = el.viewDate.value || todayDateStr();
-    let filled = 0;
-    for (let h = 0; h < 24; h++) {
-      const key = slotKeyFromDateHour(dateStr, h);
-      if (hasSavedEntry(key)) filled++;
+  function getSlotsToRender(dateStr) {
+    const stored = state.days[dateStr];
+    if (stored && stored.length) {
+      return stored.slice().sort((a, b) => parseTimeToMinutes(a.start) - parseTimeToMinutes(b.start));
     }
-    el.daySummary.textContent = `${dateStr} · ${filled} of 24 hours saved · ${24 - filled} empty`;
+    return [{ id: '__draft__', start: '09:00', end: '10:00', text: '', at: undefined }];
   }
 
-  function refreshRowAppearance(card) {
+  function updateDaySummary() {
+    const dateStr = el.viewDate.value || todayDateStr();
+    const slots = state.days[dateStr] || [];
+    let slotsWithText = 0;
+    let hours = 0;
+    slots.forEach((s) => {
+      const t = (s.text || '').trim();
+      if (!t) return;
+      slotsWithText += 1;
+      hours += slotDurationHours(s.start, s.end);
+    });
+    const hRound = Math.round(hours * 100) / 100;
+    const hStr = Number.isInteger(hRound) ? String(hRound) : hRound.toFixed(2).replace(/\.?0+$/, '');
+    el.daySummary.textContent = `${dateStr} · ${slotsWithText} saved block${slotsWithText === 1 ? '' : 's'} · ${hStr} h total`;
+  }
+
+  function updateSlotDurationLabel(card) {
     if (!card) return;
-    const key = card.getAttribute('data-slot');
-    if (!key) return;
-    const saved = hasSavedEntry(key);
-    card.classList.toggle('hour-card--done', saved);
-    card.classList.toggle('hour-card--pending', !saved);
+    const startInp = card.querySelector('.slot-start');
+    const endInp = card.querySelector('.slot-end');
+    const elDur = card.querySelector('.slot-duration');
+    if (!startInp || !endInp || !elDur) return;
+    const h = slotDurationHours(startInp.value, endInp.value);
+    elDur.textContent = formatDurationShort(h);
   }
 
   function renderDay() {
     const dateStr = el.viewDate.value || todayDateStr();
-    const rows = [];
-    for (let h = 0; h < 24; h++) {
-      const key = slotKeyFromDateHour(dateStr, h);
-      const entry = state.entries[key];
-      const text = entry && entry.text ? entry.text : '';
-      rows.push({
-        key,
-        hourIndex: h,
-        rangeLabel: hourRangeLabel(dateStr, h),
-        text,
-        saved: hasSavedEntry(key)
-      });
-    }
-
+    const rows = getSlotsToRender(dateStr);
     updateDaySummary();
 
     if (!el.hourList) return;
     el.hourList.innerHTML = rows
-      .map((r) => {
-        const taId = 'hour-ta-' + r.hourIndex;
-        const stateClass = r.saved ? 'hour-card--done' : 'hour-card--pending';
-        return `<article class="hour-card ${stateClass}" data-slot="${escapeAttr(r.key)}">
+      .map((r, idx) => {
+        const taId = 'slot-ta-' + idx;
+        const saved = !!(r.text || '').trim() && r.id !== '__draft__';
+        const stateClass = saved ? 'hour-card--done' : 'hour-card--pending';
+        const rangeLabel = formatRangeLabel(dateStr, r.start, r.end);
+        const dur = formatDurationShort(slotDurationHours(r.start, r.end));
+        const removeHidden = rows.length <= 1 ? ' hidden' : '';
+        return `<article class="hour-card ${stateClass}" data-slot-id="${escapeAttr(r.id)}">
           <div class="hour-card-top">
-            <div class="hour-card-time">
-              <span class="hour-card-kicker">Time</span>
-              <span class="hour-range">${escapeHtml(r.rangeLabel)}</span>
+            <div class="hour-card-time hour-card-time--flex">
+              <span class="hour-card-kicker">When</span>
+              <span class="hour-range hour-range--sub">${escapeHtml(rangeLabel)}</span>
             </div>
-            <button type="button" class="btn btn-submit" data-slot="${escapeAttr(r.key)}">Submit</button>
+            <div class="time-slot-row">
+              <label class="time-field">
+                <span class="time-field-label">Start</span>
+                <input type="time" class="slot-start" step="60" value="${escapeAttr(r.start)}" />
+              </label>
+              <label class="time-field">
+                <span class="time-field-label">End</span>
+                <input type="time" class="slot-end" step="60" value="${escapeAttr(r.end)}" />
+              </label>
+              <span class="slot-duration">${dur}</span>
+            </div>
+            <div class="hour-card-actions">
+              <button type="button" class="btn secondary btn-remove-slot${removeHidden}" aria-label="Remove this time slot">Remove</button>
+              <button type="button" class="btn btn-submit" data-slot-id="${escapeAttr(r.id)}">Submit</button>
+            </div>
           </div>
           <div class="hour-card-fields">
             <label class="suggest-wrap">
               <span class="suggest-label">Suggestions</span>
-              <input type="text" class="suggest-input" list="activity-suggestions" data-slot="${escapeAttr(r.key)}" placeholder="Pick from list or type to filter" autocomplete="off" />
+              <input type="text" class="suggest-input" list="activity-suggestions" placeholder="Pick from list or type to filter" autocomplete="off" />
             </label>
             <label class="hour-field-label" for="${taId}">Activity</label>
-            <textarea id="${taId}" class="hour-input" data-slot="${escapeAttr(r.key)}" rows="3" maxlength="4000" placeholder="What did you do this hour? Tap Submit to save."></textarea>
+            <textarea id="${taId}" class="hour-input" rows="3" maxlength="4000" placeholder="What did you do in this time range? Tap Submit to save."></textarea>
           </div>
         </article>`;
       })
       .join('');
 
-    rows.forEach((r) => {
-      const ta = el.hourList.querySelector('.hour-input[data-slot="' + escapeAttr(r.key) + '"]');
-      if (ta) ta.value = r.text;
+    el.hourList.querySelectorAll('.hour-card').forEach((card, i) => {
+      const ta = card.querySelector('.hour-input');
+      if (ta && rows[i]) ta.value = rows[i].text || '';
+      updateSlotDurationLabel(card);
     });
+  }
+
+  function readCardSlot(card) {
+    if (!card) return null;
+    const id = card.getAttribute('data-slot-id');
+    const startInp = card.querySelector('.slot-start');
+    const endInp = card.querySelector('.slot-end');
+    const ta = card.querySelector('.hour-input');
+    if (!id || !startInp || !endInp || !ta) return null;
+    return {
+      id,
+      start: startInp.value || '09:00',
+      end: endInp.value || '10:00',
+      text: ta.value || ''
+    };
+  }
+
+  function applySlotToState(dateStr, slotId, start, end, text) {
+    const trimmed = (text || '').trim();
+    const dur = slotDurationHours(start, end);
+    if (trimmed && dur <= 0) {
+      alert('End time must be after start time. For overnight, use a later end (e.g. 23:00 → 00:00).');
+      return false;
+    }
+
+    if (!trimmed) {
+      if (slotId === '__draft__') {
+        saveState();
+        return true;
+      }
+      const arr = state.days[dateStr];
+      if (!arr) {
+        saveState();
+        return true;
+      }
+      const idx = arr.findIndex((s) => s.id === slotId);
+      if (idx >= 0) arr.splice(idx, 1);
+      if (arr.length === 0) delete state.days[dateStr];
+      saveState();
+      return true;
+    }
+
+    if (slotId === '__draft__') {
+      if (!state.days[dateStr]) state.days[dateStr] = [];
+      state.days[dateStr].push({
+        id: newId(),
+        start,
+        end,
+        text: trimmed,
+        at: new Date().toISOString()
+      });
+      saveState();
+      return true;
+    }
+
+    const arr = state.days[dateStr];
+    if (!arr) {
+      state.days[dateStr] = [
+        { id: slotId, start, end, text: trimmed, at: new Date().toISOString() }
+      ];
+      saveState();
+      return true;
+    }
+    const slot = arr.find((s) => s.id === slotId);
+    if (slot) {
+      slot.start = start;
+      slot.end = end;
+      slot.text = trimmed;
+      slot.at = new Date().toISOString();
+    } else {
+      arr.push({ id: slotId, start, end, text: trimmed, at: new Date().toISOString() });
+    }
+    saveState();
+    return true;
   }
 
   function escapeHtml(s) {
@@ -415,19 +569,21 @@
 
   function collectUniqueDates() {
     const set = new Set();
-    Object.keys(state.entries).forEach((k) => {
-      const i = k.indexOf('T');
-      if (i > 0) set.add(k.slice(0, i));
+    Object.keys(state.days || {}).forEach((dateStr) => {
+      const has = (state.days[dateStr] || []).some((s) => (s.text || '').trim());
+      if (has) set.add(dateStr);
     });
     return Array.from(set).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
   }
 
-  function countFilledHours(dateStr) {
-    let n = 0;
-    for (let h = 0; h < 24; h++) {
-      if (hasSavedEntry(slotKeyFromDateHour(dateStr, h))) n++;
-    }
-    return n;
+  function countDayLoggedHours(dateStr) {
+    let hours = 0;
+    (state.days[dateStr] || []).forEach((s) => {
+      if (!(s.text || '').trim()) return;
+      hours += slotDurationHours(s.start, s.end);
+    });
+    const r = Math.round(hours * 100) / 100;
+    return Number.isInteger(r) ? r : r;
   }
 
   function weekdayForDateStr(dateStr) {
@@ -437,23 +593,26 @@
   }
 
   /**
-   * Group saved slot texts by case-insensitive key; count hours (slots) each.
+   * Group saved slot texts by case-insensitive key; sum duration (hours) each.
    * @returns {{ display: string, hours: number }[]}
    */
   function aggregateActivityHours() {
     /** @type {Map<string, { display: string, hours: number }>} */
     const map = new Map();
-    Object.keys(state.entries).forEach((slotKey) => {
-      const e = state.entries[slotKey];
-      const t = (e.text || '').trim();
-      if (!t) return;
-      const norm = t.toLowerCase();
-      const cur = map.get(norm);
-      if (cur) {
-        cur.hours += 1;
-      } else {
-        map.set(norm, { display: t, hours: 1 });
-      }
+    Object.keys(state.days || {}).forEach((dateStr) => {
+      (state.days[dateStr] || []).forEach((slot) => {
+        const t = (slot.text || '').trim();
+        if (!t) return;
+        const dur = slotDurationHours(slot.start, slot.end);
+        if (dur <= 0) return;
+        const norm = t.toLowerCase();
+        const cur = map.get(norm);
+        if (cur) {
+          cur.hours += dur;
+        } else {
+          map.set(norm, { display: t, hours: dur });
+        }
+      });
     });
     return Array.from(map.values()).sort((a, b) => {
       if (b.hours !== a.hours) return b.hours - a.hours;
@@ -461,10 +620,15 @@
     });
   }
 
+  function fmtHoursNum(n) {
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(2).replace(/\.?0+$/, '');
+  }
+
   function renderActivitySummary() {
     if (!el.activityList || !el.activityEmpty || !el.activityTotal) return;
     const rows = aggregateActivityHours();
-    const totalSlots = rows.reduce((s, r) => s + r.hours, 0);
+    const totalH = rows.reduce((s, r) => s + r.hours, 0);
     if (rows.length === 0) {
       el.activityList.innerHTML = '';
       el.activityEmpty.classList.remove('hidden');
@@ -472,15 +636,15 @@
       return;
     }
     el.activityEmpty.classList.add('hidden');
-    el.activityTotal.textContent = `Total logged hours: ${totalSlots} · ${rows.length} distinct activit${rows.length === 1 ? 'y' : 'ies'}`;
+    el.activityTotal.textContent = `Total logged hours: ${fmtHoursNum(totalH)} · ${rows.length} distinct activit${rows.length === 1 ? 'y' : 'ies'}`;
     el.activityList.innerHTML = rows
       .map((r) => {
-        const pct = totalSlots > 0 ? Math.round((r.hours / totalSlots) * 1000) / 10 : 0;
+        const pct = totalH > 0 ? Math.round((r.hours / totalH) * 1000) / 10 : 0;
         const pctStr = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
         return `<article class="activity-card">
           <p class="activity-card-name">${escapeHtml(r.display)}</p>
           <dl class="activity-card-stats">
-            <div class="activity-stat"><dt>Hours</dt><dd>${r.hours}</dd></div>
+            <div class="activity-stat"><dt>Hours</dt><dd>${fmtHoursNum(r.hours)}</dd></div>
             <div class="activity-stat"><dt>Share</dt><dd>${pctStr}%</dd></div>
           </dl>
         </article>`;
@@ -533,7 +697,7 @@
     }
 
     const rows = aggregateActivityHours();
-    const totalSlots = rows.reduce((s, r) => s + r.hours, 0);
+    const totalH = rows.reduce((s, r) => s + r.hours, 0);
 
     if (rows.length === 0) {
       destroyActivityChart();
@@ -543,7 +707,7 @@
     }
 
     setPlaceholder(false, defaultMsg);
-    el.chartSummary.textContent = `Total logged hours: ${totalSlots} · ${rows.length} distinct activit${rows.length === 1 ? 'y' : 'ies'}`;
+    el.chartSummary.textContent = `Total logged hours: ${fmtHoursNum(totalH)} · ${rows.length} distinct activit${rows.length === 1 ? 'y' : 'ies'}`;
 
     const labels = rows.map((r) => truncateChartLabel(r.display));
     const data = rows.map((r) => r.hours);
@@ -595,8 +759,8 @@
               },
               label: (item) => {
                 const v = Number(item.raw);
-                const pct = totalSlots > 0 ? ((v / totalSlots) * 100).toFixed(1) : '0';
-                return ` ${v} h (${pct}%)`;
+                const pct = totalH > 0 ? ((v / totalH) * 100).toFixed(1) : '0';
+                return ` ${fmtHoursNum(v)} h (${pct}%)`;
               }
             }
           }
@@ -616,12 +780,13 @@
     el.historyEmpty.classList.add('hidden');
     el.historyList.innerHTML = dates
       .map((dateStr) => {
-        const filled = countFilledHours(dateStr);
+        const filled = countDayLoggedHours(dateStr);
+        const filledStr = Number.isInteger(filled) ? String(filled) : filled.toFixed(2).replace(/\.?0+$/, '');
         const wd = weekdayForDateStr(dateStr);
         return `<article class="history-card">
           <div class="history-card-info">
             <div class="history-card-date mono">${escapeHtml(dateStr)}</div>
-            <div class="history-card-meta">${escapeHtml(wd)} · ${filled} h filled</div>
+            <div class="history-card-meta">${escapeHtml(wd)} · ${escapeHtml(filledStr)} h logged</div>
           </div>
           <button type="button" class="btn secondary btn-open-day" data-date="${escapeAttr(dateStr)}">Open day</button>
         </article>`;
@@ -630,6 +795,13 @@
   }
 
   if (el.hourList) {
+    el.hourList.addEventListener('input', (e) => {
+      const t = e.target;
+      if (t && t.classList && (t.classList.contains('slot-start') || t.classList.contains('slot-end'))) {
+        updateSlotDurationLabel(t.closest('.hour-card'));
+      }
+    });
+
     el.hourList.addEventListener('change', (e) => {
       const inp = e.target.closest('.suggest-input');
       if (!inp) return;
@@ -642,19 +814,54 @@
     });
 
     el.hourList.addEventListener('click', (e) => {
+      const dateStr = el.viewDate.value || todayDateStr();
+
+      const rm = e.target.closest('.btn-remove-slot');
+      if (rm) {
+        const card = rm.closest('.hour-card');
+        const id = card && card.getAttribute('data-slot-id');
+        if (!id || id === '__draft__') return;
+        if (state.days[dateStr]) {
+          const idx = state.days[dateStr].findIndex((s) => s.id === id);
+          if (idx >= 0) state.days[dateStr].splice(idx, 1);
+          if (state.days[dateStr].length === 0) delete state.days[dateStr];
+        }
+        saveState();
+        renderDay();
+        renderHistory();
+        renderActivitySummary();
+        return;
+      }
+
       const btn = e.target.closest('.btn-submit');
       if (!btn) return;
-      const key = btn.getAttribute('data-slot');
-      if (!key) return;
       const card = btn.closest('.hour-card');
-      const ta = card && card.querySelector('.hour-input');
-      const text = ta ? ta.value : '';
-      persistSlot(key, text);
-      if (text.trim()) addToSuggestionLibrary(text.trim());
+      const p = readCardSlot(card);
+      if (!p) return;
+      const ok = applySlotToState(dateStr, p.id, p.start, p.end, p.text);
+      if (!ok) return;
+      if (p.text.trim()) addToSuggestionLibrary(p.text.trim());
+      renderDay();
       updateDaySummary();
       renderHistory();
       renderActivitySummary();
-      refreshRowAppearance(card);
+    });
+  }
+
+  if (el.btnAddSlot) {
+    el.btnAddSlot.addEventListener('click', () => {
+      const dateStr = el.viewDate.value || todayDateStr();
+      if (!state.days[dateStr] || state.days[dateStr].length === 0) {
+        state.days[dateStr] = [{ id: newId(), start: '09:00', end: '10:00', text: '' }];
+      } else {
+        const arr = state.days[dateStr];
+        const last = arr[arr.length - 1];
+        const start = last.end || last.start;
+        const end = addMinutesToTimeStr(start, 60);
+        arr.push({ id: newId(), start, end, text: '' });
+      }
+      saveState();
+      renderDay();
     });
   }
 
@@ -722,7 +929,7 @@
     let y = margin;
     const wd = weekdayForDateStr(dateStr);
     doc.setFontSize(14);
-    doc.text('Hourly activity log — ' + dateStr + ' (' + wd + ')', margin, y);
+    doc.text('Activity log — ' + dateStr + ' (' + wd + ')', margin, y);
     y += 28;
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -730,20 +937,30 @@
     y += 24;
     doc.setTextColor(0);
 
-    for (let h = 0; h < 24; h++) {
-      const key = slotKeyFromDateHour(dateStr, h);
-      const entry = state.entries[key];
-      const line = entry?.text?.trim() ? entry.text.trim() : '—';
-      const range = hourRangeLabel(dateStr, h);
-      const block = range + ' — ' + line;
-      const lines = doc.splitTextToSize(block, 500);
-      if (y > 780) {
-        doc.addPage();
-        y = margin;
-      }
+    const slots = (state.days[dateStr] || [])
+      .filter((s) => (s.text || '').trim())
+      .slice()
+      .sort((a, b) => a.start.localeCompare(b.start));
+
+    if (slots.length === 0) {
       doc.setFontSize(11);
-      doc.text(lines, margin, y);
-      y += lines.length * 14 + 6;
+      doc.text('No entries for this day.', margin, y);
+    } else {
+      slots.forEach((slot) => {
+        const range = formatRangeLabel(dateStr, slot.start, slot.end);
+        const line = slot.text.trim();
+        const dur = slotDurationHours(slot.start, slot.end);
+        const durStr = Number.isInteger(dur) ? String(dur) : dur.toFixed(2).replace(/\.?0+$/, '');
+        const block = range + ' (' + durStr + ' h) — ' + line;
+        const lines = doc.splitTextToSize(block, 500);
+        if (y > 780) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.setFontSize(11);
+        doc.text(lines, margin, y);
+        y += lines.length * 14 + 6;
+      });
     }
 
     doc.save('activity-log-' + dateStr + '.pdf');
