@@ -1,5 +1,5 @@
 /* Hourly Activity Log — network-first for app shell so deploys show up after refresh */
-const CACHE = 'hourly-log-v7';
+const CACHE = 'hourly-log-v10';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -58,7 +58,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  if (url.href.includes('cdnjs.cloudflare.com/ajax/libs/jspdf')) {
+  if (
+    url.href.includes('cdnjs.cloudflare.com/ajax/libs/jspdf') ||
+    url.href.includes('cdnjs.cloudflare.com/ajax/libs/Chart.js')
+  ) {
     event.respondWith(networkFirst(req));
     return;
   }

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#2563eb" />
   <meta name="description" content="Offline hourly activity log — local storage, tables, PDF" />
   <title>Hourly Activity Log</title>
@@ -39,10 +40,11 @@
       <p id="notify-status" class="notify-status" role="status" aria-live="polite"></p>
     </section>
 
-    <nav class="tabs tabs-3" role="tablist" aria-label="Views">
+    <nav class="tabs tabs-grid" role="tablist" aria-label="Views">
       <button type="button" class="tab active" id="tab-btn-log" role="tab" aria-selected="true" aria-controls="panel-log" data-panel="log">Day log</button>
       <button type="button" class="tab" id="tab-btn-history" role="tab" aria-selected="false" aria-controls="panel-history" data-panel="history">All days</button>
       <button type="button" class="tab" id="tab-btn-activity" role="tab" aria-selected="false" aria-controls="panel-activity" data-panel="activity">By activity</button>
+      <button type="button" class="tab" id="tab-btn-charts" role="tab" aria-selected="false" aria-controls="panel-charts" data-panel="charts">Charts</button>
     </nav>
 
     <section id="panel-log" class="panel" role="tabpanel" aria-labelledby="tab-btn-log">
@@ -56,19 +58,8 @@
           <button type="button" id="btn-pdf" class="btn">Download PDF</button>
         </div>
         <p id="day-summary" class="day-summary"></p>
-        <p class="hint activity-hint">Each row is a time range (e.g. 12 PM – 1 PM). Type or pick a suggestion, then press <strong>Submit</strong> to save that hour.</p>
-        <div class="table-wrap">
-          <table class="day-table" id="day-table" aria-describedby="day-summary">
-            <thead>
-              <tr>
-                <th scope="col" class="col-hour">Time</th>
-                <th scope="col">Activity</th>
-                <th scope="col" class="col-submit">Save</th>
-              </tr>
-            </thead>
-            <tbody id="hour-tbody"></tbody>
-          </table>
-        </div>
+        <p class="hint activity-hint">Each block is one hour. Pick a suggestion or type, then <strong>Submit</strong> to save.</p>
+        <div id="hour-list" class="hour-cards" role="feed" aria-label="Hour by hour log" aria-busy="false"></div>
       </div>
     </section>
 
@@ -76,19 +67,7 @@
       <div class="card">
         <h2 class="history-heading">Days with entries</h2>
         <p class="hint history-hint">Each row is one calendar day. Open a day to edit hours.</p>
-        <div class="table-wrap">
-          <table class="history-table" id="history-table">
-            <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Day</th>
-                <th scope="col">Hours filled</th>
-                <th scope="col" class="col-open">Open</th>
-              </tr>
-            </thead>
-            <tbody id="history-tbody"></tbody>
-          </table>
-        </div>
+        <div id="history-list" class="history-cards" role="region" aria-label="Days with entries"></div>
         <p id="history-empty" class="history-empty hidden">No entries yet. Use <strong>Day log</strong>, write activities, and press <strong>Submit</strong> on each row.</p>
       </div>
     </section>
@@ -100,19 +79,22 @@
           Each hour you submit counts as <strong>1 hour</strong> toward that activity. Entries with the same wording (ignoring capital letters) are grouped together.
         </p>
         <p id="activity-total" class="day-summary" aria-live="polite"></p>
-        <div class="table-wrap">
-          <table class="activity-summary-table" id="activity-summary-table">
-            <thead>
-              <tr>
-                <th scope="col">Activity</th>
-                <th scope="col" class="col-hours">Hours</th>
-                <th scope="col" class="col-pct">Share</th>
-              </tr>
-            </thead>
-            <tbody id="activity-tbody"></tbody>
-          </table>
-        </div>
+        <div id="activity-list" class="activity-cards" role="region" aria-label="Totals by activity"></div>
         <p id="activity-empty" class="history-empty hidden">No activities logged yet. Use <strong>Day log</strong> and press <strong>Submit</strong> on each hour.</p>
+      </div>
+    </section>
+
+    <section id="panel-charts" class="panel hidden" role="tabpanel" aria-labelledby="tab-btn-charts" hidden>
+      <div class="card">
+        <h2 class="history-heading">Activity chart</h2>
+        <p class="hint chart-hint">Hours per activity (same grouping as <strong>By activity</strong>). Open online once so Chart.js can load; then it works offline.</p>
+        <p id="chart-summary" class="day-summary" aria-live="polite"></p>
+        <div id="chart-placeholder" class="chart-placeholder">
+          <p id="chart-message">No data to chart yet. Log hours on <strong>Day log</strong> first.</p>
+        </div>
+        <div id="chart-wrap" class="chart-wrap hidden">
+          <canvas id="activity-donut-chart" width="400" height="320" aria-label="Donut chart of hours by activity"></canvas>
+        </div>
       </div>
     </section>
 
@@ -122,6 +104,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous"></script>
   <script src="app.js" defer></script>
 </body>
 </html>
