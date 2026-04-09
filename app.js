@@ -670,24 +670,25 @@
     });
   }
 
+  function setPanelVisibility(panel, visible) {
+    if (!panel) return;
+    panel.classList.toggle('hidden', !visible);
+    panel.hidden = !visible;
+    if ('inert' in HTMLElement.prototype) {
+      panel.inert = !visible;
+    }
+  }
+
   function showPanel(name) {
     const isLog = name === 'log';
     const isHistory = name === 'history';
     const isActivity = name === 'activity';
     const isCharts = name === 'charts';
 
-    el.panelLog.classList.toggle('hidden', !isLog);
-    el.panelLog.hidden = !isLog;
-    el.panelHistory.classList.toggle('hidden', !isHistory);
-    el.panelHistory.hidden = !isHistory;
-    if (el.panelActivity) {
-      el.panelActivity.classList.toggle('hidden', !isActivity);
-      el.panelActivity.hidden = !isActivity;
-    }
-    if (el.panelCharts) {
-      el.panelCharts.classList.toggle('hidden', !isCharts);
-      el.panelCharts.hidden = !isCharts;
-    }
+    setPanelVisibility(el.panelLog, isLog);
+    setPanelVisibility(el.panelHistory, isHistory);
+    setPanelVisibility(el.panelActivity, isActivity);
+    setPanelVisibility(el.panelCharts, isCharts);
 
     el.tabBtnLog.classList.toggle('active', isLog);
     el.tabBtnHistory.classList.toggle('active', isHistory);
